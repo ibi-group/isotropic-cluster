@@ -1,5 +1,5 @@
 import './js/logger-setup.js';
-import _chai from 'chai';
+import _chai from 'isotropic-dev-dependencies/lib/chai.js';
 import _cluster from 'cluster';
 import _ClusterMaster from '../js/cluster-master.js';
 import _ClusterWorker from '../js/cluster-worker.js';
@@ -7,7 +7,7 @@ import _Error from 'isotropic-error';
 import _later from 'isotropic-later';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _mocha from 'mocha';
+import _mocha from 'isotropic-dev-dependencies/lib/mocha.js';
 
 if (_cluster.isMaster) {
     _mocha.describe('cluster-worker', function () {
@@ -45,7 +45,12 @@ if (_cluster.isMaster) {
     });
 
     _mocha.describe('cluster-master', function () {
-        this.timeout(17711);
+        this.timeout(28657);
+
+        _mocha.beforeEach(done => {
+            // Add a pause to prevent interference from the previous test
+            _later(1597, done);
+        });
 
         _mocha.it('should construct cluster master objects', callbackFunction => {
             _chai.expect(_ClusterMaster).to.be.a('function');
