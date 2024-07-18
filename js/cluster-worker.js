@@ -1,16 +1,16 @@
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _Error from 'isotropic-error';
 import _Initializable from 'isotropic-initializable';
 import _later from 'isotropic-later';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _path from 'path';
-import _process from 'process';
+import _path from 'node:path';
+import _process from 'node:process';
 
 const _workerId = _cluster.worker && _cluster.worker.id,
 
     _moduleLogger = _logger.child({
-        module: _path.basename(__filename, _path.extname(__filename)),
+        module: _path.basename(import.meta.filename, _path.extname(import.meta.filename)),
         workerId: _workerId
     });
 

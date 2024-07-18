@@ -1,11 +1,11 @@
 import './logger-setup.js';
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _ClusterWorker from '../../js/cluster-worker.js';
 import _Error from 'isotropic-error';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _net from 'net';
-import _process from 'process';
+import _net from 'node:net';
+import _process from 'node:process';
 
 if (_cluster.isWorker) {
     switch (_process.argv[2]) {

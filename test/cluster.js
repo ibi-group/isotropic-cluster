@@ -1,6 +1,6 @@
 import './js/logger-setup.js';
 import _chai from 'isotropic-dev-dependencies/lib/chai.js';
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _ClusterMaster from '../js/cluster-master.js';
 import _ClusterWorker from '../js/cluster-worker.js';
 import _Error from 'isotropic-error';
@@ -380,7 +380,7 @@ if (_cluster.isMaster) {
                         'communicate',
                         'send-after-disconnect'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -564,7 +564,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'typed'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 });
 
             clusterMaster.after({
@@ -1295,7 +1295,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'typed'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -1464,7 +1464,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'identify'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -1603,7 +1603,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'communicate'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -1752,7 +1752,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'early-send'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -1873,7 +1873,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'communicate'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -2097,7 +2097,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'server'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
@@ -2223,7 +2223,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerExitObjects = [],
@@ -2454,7 +2454,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerExitObjects = [],
@@ -2641,7 +2641,7 @@ if (_cluster.isMaster) {
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 initialWorkerIdSelectionOrder = [],
@@ -2732,7 +2732,10 @@ if (_cluster.isMaster) {
                             ]);
 
                             clusterMaster.workerById[initialWorkerIdSelectionOrder[0]].destroy();
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[1]].destroy();
+
+                            clusterMaster.onceAfter('workerDisconnect', () => {
+                                clusterMaster.workerById[initialWorkerIdSelectionOrder[1]].destroy();
+                            });
 
                             break;
                         case 5:
@@ -2783,7 +2786,10 @@ if (_cluster.isMaster) {
                             ]);
 
                             clusterMaster.workerById[initialWorkerIdSelectionOrder[3]].destroy();
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[4]].destroy();
+
+                            clusterMaster.onceAfter('workerDisconnect', () => {
+                                clusterMaster.workerById[initialWorkerIdSelectionOrder[4]].destroy();
+                            });
 
                             break;
                         case 7: {
@@ -2910,16 +2916,16 @@ if (_cluster.isMaster) {
                         'on removeWorker',
                         'after removeWorker',
                         'after workerDisconnect',
-                        'on workerDisconnect',
-                        'on removeWorker',
-                        'after removeWorker',
-                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
                         'after workerExit',
                         'on workerFork',
                         'after workerFork',
+                        'on workerDisconnect',
+                        'on removeWorker',
+                        'after removeWorker',
+                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
@@ -2946,16 +2952,16 @@ if (_cluster.isMaster) {
                         'on removeWorker',
                         'after removeWorker',
                         'after workerDisconnect',
-                        'on workerDisconnect',
-                        'on removeWorker',
-                        'after removeWorker',
-                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
                         'after workerExit',
                         'on workerFork',
                         'after workerFork',
+                        'on workerDisconnect',
+                        'on removeWorker',
+                        'after removeWorker',
+                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
