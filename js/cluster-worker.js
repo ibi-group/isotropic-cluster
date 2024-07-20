@@ -26,7 +26,7 @@ export default _make(_Initializable, {
                             message
                         },
                         error,
-                        message: 'Error sending message to master'
+                        message: 'Error sending message to primary'
                     }));
                 } else {
                     resolve();
@@ -54,12 +54,12 @@ export default _make(_Initializable, {
             });
         }
     },
-    _eventMasterDisconnect () {
-        _moduleLogger.info('Master disconnected');
+    _eventPrimaryDisconnect () {
+        _moduleLogger.info('Primary disconnected');
     },
-    _eventMasterMessage (event) {
+    _eventPrimaryMessage (event) {
         if (event.data.message && event.data.message.type) {
-            const method = this[`_eventMasterMessage_${event.data.message.type}`];
+            const method = this[`_eventPrimaryMessage_${event.data.message.type}`];
 
             if (typeof method === 'function') {
                 Reflect.apply(method, this, [
@@ -71,10 +71,10 @@ export default _make(_Initializable, {
     _init (...args) {
         this._processEvents = {
             disconnect: () => {
-                this._publish('masterDisconnect');
+                this._publish('primaryDisconnect');
             },
             message: (message, handle) => {
-                this._publish('masterMessage', {
+                this._publish('primaryMessage', {
                     handle,
                     message
                 });
@@ -107,13 +107,13 @@ export default _make(_Initializable, {
         return _workerId;
     },
     _events: {
-        masterDisconnect: {
+        primaryDisconnect: {
             allowPublicPublish: false,
-            defaultFunction: '_eventMasterDisconnect'
+            defaultFunction: '_eventPrimaryDisconnect'
         },
-        masterMessage: {
+        primaryMessage: {
             allowPublicPublish: false,
-            defaultFunction: '_eventMasterMessage'
+            defaultFunction: '_eventPrimaryMessage'
         }
     }
 });

@@ -367,7 +367,7 @@ export default _make(_Initializable, {
         return Reflect.apply(_Initializable.prototype._init, this, args);
     },
     _initialize (...args) {
-        _moduleLogger.info('Initializing master');
+        _moduleLogger.info('Initializing primary');
 
         const [{
             workerArgs,
@@ -376,7 +376,7 @@ export default _make(_Initializable, {
             workerStdio
         } = {}] = args;
 
-        _cluster.setupMaster({
+        _cluster.setupPrimary({
             args: typeof workerArgs === 'undefined' ?
                 _process.argv.slice(2) :
                 workerArgs,
