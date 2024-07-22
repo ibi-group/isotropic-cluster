@@ -106,7 +106,7 @@ export default _make(_Initializable, {
     get workerId () {
         return _workerId;
     },
-    _events: {
+    _pubsub: {
         primaryDisconnect: {
             allowPublicPublish: false,
             defaultFunction: '_eventPrimaryDisconnect'

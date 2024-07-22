@@ -405,7 +405,7 @@ export default _make(_Initializable, {
         return this;
     }
 }, {
-    _events: {
+    _pubsub: {
         addWorker: {
             allowPublicPublish: false,
             defaultFunction: '_eventAddWorker'
