@@ -1,11 +1,11 @@
 import './logger-setup.js';
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _ClusterWorker from '../../js/cluster-worker.js';
 import _Error from 'isotropic-error';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _net from 'net';
-import _process from 'process';
+import _net from 'node:net';
+import _process from 'node:process';
 
 if (_cluster.isWorker) {
     switch (_process.argv[2]) {
@@ -13,7 +13,7 @@ if (_cluster.isWorker) {
             const clusterWorker = _ClusterWorker();
 
             clusterWorker.after({
-                masterDisconnect () {
+                primaryDisconnect () {
                     if (_process.argv[3] === 'send-after-disconnect') {
                         clusterWorker.send({
                             message: 'message'
@@ -22,13 +22,13 @@ if (_cluster.isWorker) {
                             _logger.error({
                                 error: _Error({
                                     error,
-                                    message: 'This is an expected error sending to master after disconnect'
+                                    message: 'This is an expected error sending to primary after disconnect'
                                 })
-                            }, 'This is an expected error sending to master after disconnect');
+                            }, 'This is an expected error sending to primary after disconnect');
                         });
                     }
                 },
-                masterMessage ({
+                primaryMessage ({
                     data: {
                         message: {
                             count
@@ -51,7 +51,7 @@ if (_cluster.isWorker) {
         case 'identify': {
             const clusterWorker = _ClusterWorker();
 
-            clusterWorker.after('masterMessage', ({
+            clusterWorker.after('primaryMessage', ({
                 data: {
                     message
                 }
@@ -70,7 +70,7 @@ if (_cluster.isWorker) {
         case 'replace': {
             const clusterWorker = _ClusterWorker();
 
-            clusterWorker.after('masterMessage', ({
+            clusterWorker.after('primaryMessage', ({
                 data: {
                     message
                 }
@@ -100,70 +100,70 @@ if (_cluster.isWorker) {
             break;
         }
         case 'typed': {
-            const masterMessages = [];
+            const primaryMessages = [];
 
             _make(_ClusterWorker, {
-                _eventMasterMessage_a ({
+                _eventPrimaryMessage_a ({
                     data: {
                         message
                     }
                 }) {
                     this.send({
                         message: {
-                            masterMessages,
                             message,
+                            primaryMessages,
                             type: 'x',
                             x: 'x'
                         }
                     });
                 },
-                _eventMasterMessage_b ({
+                _eventPrimaryMessage_b ({
                     data: {
                         message
                     }
                 }) {
                     this.send({
                         message: {
-                            masterMessages,
                             message,
+                            primaryMessages,
                             type: 'y',
                             y: 'y'
                         }
                     });
                 },
-                _eventMasterMessage_c ({
+                _eventPrimaryMessage_c ({
                     data: {
                         message
                     }
                 }) {
                     this.send({
                         message: {
-                            masterMessages,
                             message,
+                            primaryMessages,
                             type: 'z',
                             z: 'z'
                         }
                     });
                 },
-                _eventMasterMessage_replyUnknown ({
+                _eventPrimaryMessage_replyUnknown ({
                     data: {
                         message
                     }
                 }) {
                     this.send({
                         message: {
-                            masterMessages,
                             message,
+                            primaryMessages,
                             type: 'unknown'
                         }
                     });
                 }
-            })().on('masterMessage', ({
+            })().on('primaryMessage', ({
                 data: {
                     message
                 }
             }) => {
-                masterMessages.push(message);
+                primaryMessages.push(message);
             });
 
             break;

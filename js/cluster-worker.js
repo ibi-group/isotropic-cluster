@@ -1,16 +1,16 @@
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _Error from 'isotropic-error';
 import _Initializable from 'isotropic-initializable';
 import _later from 'isotropic-later';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _path from 'path';
-import _process from 'process';
+import _path from 'node:path';
+import _process from 'node:process';
 
 const _workerId = _cluster.worker && _cluster.worker.id,
 
     _moduleLogger = _logger.child({
-        module: _path.basename(__filename, _path.extname(__filename)),
+        module: _path.basename(import.meta.filename, _path.extname(import.meta.filename)),
         workerId: _workerId
     });
 
@@ -26,7 +26,7 @@ export default _make(_Initializable, {
                             message
                         },
                         error,
-                        message: 'Error sending message to master'
+                        message: 'Error sending message to primary'
                     }));
                 } else {
                     resolve();
@@ -54,12 +54,12 @@ export default _make(_Initializable, {
             });
         }
     },
-    _eventMasterDisconnect () {
-        _moduleLogger.info('Master disconnected');
+    _eventPrimaryDisconnect () {
+        _moduleLogger.info('Primary disconnected');
     },
-    _eventMasterMessage (event) {
+    _eventPrimaryMessage (event) {
         if (event.data.message && event.data.message.type) {
-            const method = this[`_eventMasterMessage_${event.data.message.type}`];
+            const method = this[`_eventPrimaryMessage_${event.data.message.type}`];
 
             if (typeof method === 'function') {
                 Reflect.apply(method, this, [
@@ -71,10 +71,10 @@ export default _make(_Initializable, {
     _init (...args) {
         this._processEvents = {
             disconnect: () => {
-                this._publish('masterDisconnect');
+                this._publish('primaryDisconnect');
             },
             message: (message, handle) => {
-                this._publish('masterMessage', {
+                this._publish('primaryMessage', {
                     handle,
                     message
                 });
@@ -106,14 +106,14 @@ export default _make(_Initializable, {
     get workerId () {
         return _workerId;
     },
-    _events: {
-        masterDisconnect: {
+    _pubsub: {
+        primaryDisconnect: {
             allowPublicPublish: false,
-            defaultFunction: '_eventMasterDisconnect'
+            defaultFunction: '_eventPrimaryDisconnect'
         },
-        masterMessage: {
+        primaryMessage: {
             allowPublicPublish: false,
-            defaultFunction: '_eventMasterMessage'
+            defaultFunction: '_eventPrimaryMessage'
         }
     }
 });

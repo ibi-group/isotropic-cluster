@@ -1,13 +1,13 @@
-import _cluster from 'cluster';
+import _cluster from 'node:cluster';
 import _Error from 'isotropic-error';
 import _Initializable from 'isotropic-initializable';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _path from 'path';
-import _process from 'process';
+import _path from 'node:path';
+import _process from 'node:process';
 
 const _moduleLogger = _logger.child({
-    module: _path.basename(__filename, _path.extname(__filename))
+    module: _path.basename(import.meta.filename, _path.extname(import.meta.filename))
 }, true);
 
 export default _make(_Initializable, {
@@ -367,7 +367,7 @@ export default _make(_Initializable, {
         return Reflect.apply(_Initializable.prototype._init, this, args);
     },
     _initialize (...args) {
-        _moduleLogger.info('Initializing master');
+        _moduleLogger.info('Initializing primary');
 
         const [{
             workerArgs,
@@ -376,7 +376,7 @@ export default _make(_Initializable, {
             workerStdio
         } = {}] = args;
 
-        _cluster.setupMaster({
+        _cluster.setupPrimary({
             args: typeof workerArgs === 'undefined' ?
                 _process.argv.slice(2) :
                 workerArgs,
@@ -405,7 +405,7 @@ export default _make(_Initializable, {
         return this;
     }
 }, {
-    _events: {
+    _pubsub: {
         addWorker: {
             allowPublicPublish: false,
             defaultFunction: '_eventAddWorker'

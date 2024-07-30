@@ -1,7 +1,7 @@
 import './js/logger-setup.js';
 import _chai from 'isotropic-dev-dependencies/lib/chai.js';
-import _cluster from 'cluster';
-import _ClusterMaster from '../js/cluster-master.js';
+import _cluster from 'node:cluster';
+import _ClusterPrimary from '../js/cluster-primary.js';
 import _ClusterWorker from '../js/cluster-worker.js';
 import _Error from 'isotropic-error';
 import _later from 'isotropic-later';
@@ -9,7 +9,7 @@ import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
 import _mocha from 'isotropic-dev-dependencies/lib/mocha.js';
 
-if (_cluster.isMaster) {
+if (_cluster.isPrimary) {
     _mocha.describe('cluster-worker', function () {
         this.timeout(144);
 
@@ -44,7 +44,7 @@ if (_cluster.isMaster) {
         });
     });
 
-    _mocha.describe('cluster-master', function () {
+    _mocha.describe('cluster-primary', function () {
         this.timeout(28657);
 
         _mocha.beforeEach(done => {
@@ -52,39 +52,39 @@ if (_cluster.isMaster) {
             _later(1597, done);
         });
 
-        _mocha.it('should construct cluster master objects', callbackFunction => {
-            _chai.expect(_ClusterMaster).to.be.a('function');
+        _mocha.it('should construct cluster primary objects', callbackFunction => {
+            _chai.expect(_ClusterPrimary).to.be.a('function');
 
-            const clusterMaster = new _ClusterMaster();
+            const clusterPrimary = new _ClusterPrimary();
 
-            _chai.expect(clusterMaster).to.be.an.instanceOf(_ClusterMaster);
+            _chai.expect(clusterPrimary).to.be.an.instanceOf(_ClusterPrimary);
 
-            clusterMaster.on('destroyComplete', () => {
+            clusterPrimary.on('destroyComplete', () => {
                 callbackFunction();
             });
 
-            clusterMaster.destroy();
+            clusterPrimary.destroy();
         });
 
         _mocha.it('should be an initializable object factory', callbackFunction => {
-            _chai.expect(_ClusterMaster).to.be.a('function');
+            _chai.expect(_ClusterPrimary).to.be.a('function');
 
-            const clusterMaster = _ClusterMaster();
+            const clusterPrimary = _ClusterPrimary();
 
-            _chai.expect(clusterMaster).to.be.an.instanceOf(_ClusterMaster);
+            _chai.expect(clusterPrimary).to.be.an.instanceOf(_ClusterPrimary);
 
-            clusterMaster.on('destroyComplete', () => {
+            clusterPrimary.on('destroyComplete', () => {
                 callbackFunction();
             });
 
-            clusterMaster.destroy();
+            clusterPrimary.destroy();
         });
 
         _mocha.it('should be able to fork a worker process', callbackFunction => {
-            const clusterMaster = _ClusterMaster(),
+            const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 fork () {
                     eventHandlersExecuted.push('after fork');
                 },
@@ -104,12 +104,12 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 destroyComplete () {
                     _chai.expect(eventHandlersExecuted).to.deep.equal([
                         'on fork',
@@ -148,16 +148,16 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should be able to fork a silent worker process', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerSilent: true
                 }),
                 eventHandlersExecuted = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 fork () {
                     eventHandlersExecuted.push('after fork');
                 },
@@ -177,12 +177,12 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 destroyComplete () {
                     _chai.expect(eventHandlersExecuted).to.deep.equal([
                         'on fork',
@@ -223,14 +223,14 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should not be able to fork a worker process after shut down', callbackFunction => {
-            const clusterMaster = _ClusterMaster(),
+            const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 fork () {
                     eventHandlersExecuted.push('after fork');
                 },
@@ -251,7 +251,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 destroyComplete () {
                     _chai.expect(eventHandlersExecuted).to.deep.equal([
                         'on shutDown',
@@ -281,18 +281,18 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.shutDown().fork();
+            clusterPrimary.shutDown().fork();
 
             _later(2584, () => {
-                clusterMaster.destroy();
+                clusterPrimary.destroy();
             });
         });
 
         _mocha.it('should handle worker process errors', callbackFunction => {
-            const clusterMaster = _ClusterMaster(),
+            const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 fork () {
                     eventHandlersExecuted.push('after fork');
                 },
@@ -323,12 +323,12 @@ if (_cluster.isMaster) {
                     }));
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 destroyComplete () {
                     _chai.expect(eventHandlersExecuted).to.deep.equal([
                         'on fork',
@@ -371,21 +371,21 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should be able to communicate with a cluster-worker instance', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'communicate',
                         'send-after-disconnect'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -419,7 +419,7 @@ if (_cluster.isMaster) {
                     const count = message.count || -1;
 
                     if (count < 5) {
-                        clusterMaster.send({
+                        clusterPrimary.send({
                             message: {
                                 count: count + 1
                             },
@@ -431,7 +431,7 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 },
                 workerReady () {
@@ -439,7 +439,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -517,21 +517,21 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should execute a method based on the type property of a message', callbackFunction => {
             const eventHandlersExecuted = [],
                 workerMessages = [],
 
-                clusterMaster = _make(_ClusterMaster, {
+                clusterPrimary = _make(_ClusterPrimary, {
                     _eventWorkerMessage_x ({
                         data: {
                             message,
                             worker
                         }
                     }) {
-                        clusterMaster.send({
+                        clusterPrimary.send({
                             message: {
                                 b: 'b',
                                 message,
@@ -547,7 +547,7 @@ if (_cluster.isMaster) {
                             worker
                         }
                     }) {
-                        clusterMaster.send({
+                        clusterPrimary.send({
                             message: {
                                 c: 'c',
                                 message,
@@ -558,16 +558,16 @@ if (_cluster.isMaster) {
                         });
                     },
                     _eventWorkerMessage_z () {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     }
                 })({
                     workerArgs: [
                         'typed'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 });
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -602,7 +602,7 @@ if (_cluster.isMaster) {
                 }) {
                     eventHandlersExecuted.push('after workerReady');
 
-                    clusterMaster.send({
+                    clusterPrimary.send({
                         message: {
                             a: 'a',
                             type: 'a',
@@ -613,7 +613,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -650,13 +650,6 @@ if (_cluster.isMaster) {
                     _chai.expect(workerMessages).to.deep.equal([
                         'ready',
                         {
-                            masterMessages: [{
-                                a: 'a',
-                                type: 'a',
-                                workerMessages: [
-                                    'ready'
-                                ]
-                            }],
                             message: {
                                 a: 'a',
                                 type: 'a',
@@ -664,11 +657,61 @@ if (_cluster.isMaster) {
                                     'ready'
                                 ]
                             },
+                            primaryMessages: [{
+                                a: 'a',
+                                type: 'a',
+                                workerMessages: [
+                                    'ready'
+                                ]
+                            }],
                             type: 'x',
                             x: 'x'
                         },
                         {
-                            masterMessages: [{
+                            message: {
+                                b: 'b',
+                                message: {
+                                    message: {
+                                        a: 'a',
+                                        type: 'a',
+                                        workerMessages: [
+                                            'ready'
+                                        ]
+                                    },
+                                    primaryMessages: [{
+                                        a: 'a',
+                                        type: 'a',
+                                        workerMessages: [
+                                            'ready'
+                                        ]
+                                    }],
+                                    type: 'x',
+                                    x: 'x'
+                                },
+                                type: 'b',
+                                workerMessages: [
+                                    'ready',
+                                    {
+                                        message: {
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }],
+                                        type: 'x',
+                                        x: 'x'
+                                    }
+                                ]
+                            },
+                            primaryMessages: [{
                                 a: 'a',
                                 type: 'a',
                                 workerMessages: [
@@ -677,13 +720,6 @@ if (_cluster.isMaster) {
                             }, {
                                 b: 'b',
                                 message: {
-                                    masterMessages: [{
-                                        a: 'a',
-                                        type: 'a',
-                                        workerMessages: [
-                                            'ready'
-                                        ]
-                                    }],
                                     message: {
                                         a: 'a',
                                         type: 'a',
@@ -691,6 +727,13 @@ if (_cluster.isMaster) {
                                             'ready'
                                         ]
                                     },
+                                    primaryMessages: [{
+                                        a: 'a',
+                                        type: 'a',
+                                        workerMessages: [
+                                            'ready'
+                                        ]
+                                    }],
                                     type: 'x',
                                     x: 'x'
                                 },
@@ -698,13 +741,6 @@ if (_cluster.isMaster) {
                                 workerMessages: [
                                     'ready',
                                     {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }],
                                         message: {
                                             a: 'a',
                                             type: 'a',
@@ -712,59 +748,240 @@ if (_cluster.isMaster) {
                                                 'ready'
                                             ]
                                         },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }],
                                         type: 'x',
                                         x: 'x'
                                     }
                                 ]
                             }],
-                            message: {
-                                b: 'b',
-                                message: {
-                                    masterMessages: [{
-                                        a: 'a',
-                                        type: 'a',
-                                        workerMessages: [
-                                            'ready'
-                                        ]
-                                    }],
-                                    message: {
-                                        a: 'a',
-                                        type: 'a',
-                                        workerMessages: [
-                                            'ready'
-                                        ]
-                                    },
-                                    type: 'x',
-                                    x: 'x'
-                                },
-                                type: 'b',
-                                workerMessages: [
-                                    'ready',
-                                    {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }],
-                                        message: {
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        },
-                                        type: 'x',
-                                        x: 'x'
-                                    }
-                                ]
-                            },
                             type: 'y',
                             y: 'y'
                         },
                         {
-                            masterMessages: [{
+                            message: {
+                                c: 'c',
+                                message: {
+                                    message: {
+                                        b: 'b',
+                                        message: {
+                                            message: {
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            },
+                                            primaryMessages: [{
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            }],
+                                            type: 'x',
+                                            x: 'x'
+                                        },
+                                        type: 'b',
+                                        workerMessages: [
+                                            'ready',
+                                            {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            }
+                                        ]
+                                    },
+                                    primaryMessages: [{
+                                        a: 'a',
+                                        type: 'a',
+                                        workerMessages: [
+                                            'ready'
+                                        ]
+                                    }, {
+                                        b: 'b',
+                                        message: {
+                                            message: {
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            },
+                                            primaryMessages: [{
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            }],
+                                            type: 'x',
+                                            x: 'x'
+                                        },
+                                        type: 'b',
+                                        workerMessages: [
+                                            'ready',
+                                            {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            }
+                                        ]
+                                    }],
+                                    type: 'y',
+                                    y: 'y'
+                                },
+                                type: 'c',
+                                workerMessages: [
+                                    'ready',
+                                    {
+                                        message: {
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }],
+                                        type: 'x',
+                                        x: 'x'
+                                    },
+                                    {
+                                        message: {
+                                            b: 'b',
+                                            message: {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            },
+                                            type: 'b',
+                                            workerMessages: [
+                                                'ready',
+                                                {
+                                                    message: {
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    },
+                                                    primaryMessages: [{
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    }],
+                                                    type: 'x',
+                                                    x: 'x'
+                                                }
+                                            ]
+                                        },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }, {
+                                            b: 'b',
+                                            message: {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            },
+                                            type: 'b',
+                                            workerMessages: [
+                                                'ready',
+                                                {
+                                                    message: {
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    },
+                                                    primaryMessages: [{
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    }],
+                                                    type: 'x',
+                                                    x: 'x'
+                                                }
+                                            ]
+                                        }],
+                                        type: 'y',
+                                        y: 'y'
+                                    }
+                                ]
+                            },
+                            primaryMessages: [{
                                 a: 'a',
                                 type: 'a',
                                 workerMessages: [
@@ -773,13 +990,6 @@ if (_cluster.isMaster) {
                             }, {
                                 b: 'b',
                                 message: {
-                                    masterMessages: [{
-                                        a: 'a',
-                                        type: 'a',
-                                        workerMessages: [
-                                            'ready'
-                                        ]
-                                    }],
                                     message: {
                                         a: 'a',
                                         type: 'a',
@@ -787,6 +997,13 @@ if (_cluster.isMaster) {
                                             'ready'
                                         ]
                                     },
+                                    primaryMessages: [{
+                                        a: 'a',
+                                        type: 'a',
+                                        workerMessages: [
+                                            'ready'
+                                        ]
+                                    }],
                                     type: 'x',
                                     x: 'x'
                                 },
@@ -794,13 +1011,6 @@ if (_cluster.isMaster) {
                                 workerMessages: [
                                     'ready',
                                     {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }],
                                         message: {
                                             a: 'a',
                                             type: 'a',
@@ -808,6 +1018,13 @@ if (_cluster.isMaster) {
                                                 'ready'
                                             ]
                                         },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }],
                                         type: 'x',
                                         x: 'x'
                                     }
@@ -815,7 +1032,50 @@ if (_cluster.isMaster) {
                             }, {
                                 c: 'c',
                                 message: {
-                                    masterMessages: [{
+                                    message: {
+                                        b: 'b',
+                                        message: {
+                                            message: {
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            },
+                                            primaryMessages: [{
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            }],
+                                            type: 'x',
+                                            x: 'x'
+                                        },
+                                        type: 'b',
+                                        workerMessages: [
+                                            'ready',
+                                            {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            }
+                                        ]
+                                    },
+                                    primaryMessages: [{
                                         a: 'a',
                                         type: 'a',
                                         workerMessages: [
@@ -824,13 +1084,6 @@ if (_cluster.isMaster) {
                                     }, {
                                         b: 'b',
                                         message: {
-                                            masterMessages: [{
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            }],
                                             message: {
                                                 a: 'a',
                                                 type: 'a',
@@ -838,6 +1091,13 @@ if (_cluster.isMaster) {
                                                     'ready'
                                                 ]
                                             },
+                                            primaryMessages: [{
+                                                a: 'a',
+                                                type: 'a',
+                                                workerMessages: [
+                                                    'ready'
+                                                ]
+                                            }],
                                             type: 'x',
                                             x: 'x'
                                         },
@@ -845,13 +1105,6 @@ if (_cluster.isMaster) {
                                         workerMessages: [
                                             'ready',
                                             {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
                                                 message: {
                                                     a: 'a',
                                                     type: 'a',
@@ -859,54 +1112,18 @@ if (_cluster.isMaster) {
                                                         'ready'
                                                     ]
                                                 },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
                                                 type: 'x',
                                                 x: 'x'
                                             }
                                         ]
                                     }],
-                                    message: {
-                                        b: 'b',
-                                        message: {
-                                            masterMessages: [{
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            }],
-                                            message: {
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            },
-                                            type: 'x',
-                                            x: 'x'
-                                        },
-                                        type: 'b',
-                                        workerMessages: [
-                                            'ready',
-                                            {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            }
-                                        ]
-                                    },
                                     type: 'y',
                                     y: 'y'
                                 },
@@ -914,13 +1131,6 @@ if (_cluster.isMaster) {
                                 workerMessages: [
                                     'ready',
                                     {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }],
                                         message: {
                                             a: 'a',
                                             type: 'a',
@@ -928,11 +1138,61 @@ if (_cluster.isMaster) {
                                                 'ready'
                                             ]
                                         },
+                                        primaryMessages: [{
+                                            a: 'a',
+                                            type: 'a',
+                                            workerMessages: [
+                                                'ready'
+                                            ]
+                                        }],
                                         type: 'x',
                                         x: 'x'
                                     },
                                     {
-                                        masterMessages: [{
+                                        message: {
+                                            b: 'b',
+                                            message: {
+                                                message: {
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
+                                                type: 'x',
+                                                x: 'x'
+                                            },
+                                            type: 'b',
+                                            workerMessages: [
+                                                'ready',
+                                                {
+                                                    message: {
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    },
+                                                    primaryMessages: [{
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    }],
+                                                    type: 'x',
+                                                    x: 'x'
+                                                }
+                                            ]
+                                        },
+                                        primaryMessages: [{
                                             a: 'a',
                                             type: 'a',
                                             workerMessages: [
@@ -941,13 +1201,6 @@ if (_cluster.isMaster) {
                                         }, {
                                             b: 'b',
                                             message: {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
                                                 message: {
                                                     a: 'a',
                                                     type: 'a',
@@ -955,6 +1208,13 @@ if (_cluster.isMaster) {
                                                         'ready'
                                                     ]
                                                 },
+                                                primaryMessages: [{
+                                                    a: 'a',
+                                                    type: 'a',
+                                                    workerMessages: [
+                                                        'ready'
+                                                    ]
+                                                }],
                                                 type: 'x',
                                                 x: 'x'
                                             },
@@ -962,13 +1222,6 @@ if (_cluster.isMaster) {
                                             workerMessages: [
                                                 'ready',
                                                 {
-                                                    masterMessages: [{
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    }],
                                                     message: {
                                                         a: 'a',
                                                         type: 'a',
@@ -976,276 +1229,23 @@ if (_cluster.isMaster) {
                                                             'ready'
                                                         ]
                                                     },
+                                                    primaryMessages: [{
+                                                        a: 'a',
+                                                        type: 'a',
+                                                        workerMessages: [
+                                                            'ready'
+                                                        ]
+                                                    }],
                                                     type: 'x',
                                                     x: 'x'
                                                 }
                                             ]
                                         }],
-                                        message: {
-                                            b: 'b',
-                                            message: {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            },
-                                            type: 'b',
-                                            workerMessages: [
-                                                'ready',
-                                                {
-                                                    masterMessages: [{
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    }],
-                                                    message: {
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    },
-                                                    type: 'x',
-                                                    x: 'x'
-                                                }
-                                            ]
-                                        },
                                         type: 'y',
                                         y: 'y'
                                     }
                                 ]
                             }],
-                            message: {
-                                c: 'c',
-                                message: {
-                                    masterMessages: [{
-                                        a: 'a',
-                                        type: 'a',
-                                        workerMessages: [
-                                            'ready'
-                                        ]
-                                    }, {
-                                        b: 'b',
-                                        message: {
-                                            masterMessages: [{
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            }],
-                                            message: {
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            },
-                                            type: 'x',
-                                            x: 'x'
-                                        },
-                                        type: 'b',
-                                        workerMessages: [
-                                            'ready',
-                                            {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            }
-                                        ]
-                                    }],
-                                    message: {
-                                        b: 'b',
-                                        message: {
-                                            masterMessages: [{
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            }],
-                                            message: {
-                                                a: 'a',
-                                                type: 'a',
-                                                workerMessages: [
-                                                    'ready'
-                                                ]
-                                            },
-                                            type: 'x',
-                                            x: 'x'
-                                        },
-                                        type: 'b',
-                                        workerMessages: [
-                                            'ready',
-                                            {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            }
-                                        ]
-                                    },
-                                    type: 'y',
-                                    y: 'y'
-                                },
-                                type: 'c',
-                                workerMessages: [
-                                    'ready',
-                                    {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }],
-                                        message: {
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        },
-                                        type: 'x',
-                                        x: 'x'
-                                    },
-                                    {
-                                        masterMessages: [{
-                                            a: 'a',
-                                            type: 'a',
-                                            workerMessages: [
-                                                'ready'
-                                            ]
-                                        }, {
-                                            b: 'b',
-                                            message: {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            },
-                                            type: 'b',
-                                            workerMessages: [
-                                                'ready',
-                                                {
-                                                    masterMessages: [{
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    }],
-                                                    message: {
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    },
-                                                    type: 'x',
-                                                    x: 'x'
-                                                }
-                                            ]
-                                        }],
-                                        message: {
-                                            b: 'b',
-                                            message: {
-                                                masterMessages: [{
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                }],
-                                                message: {
-                                                    a: 'a',
-                                                    type: 'a',
-                                                    workerMessages: [
-                                                        'ready'
-                                                    ]
-                                                },
-                                                type: 'x',
-                                                x: 'x'
-                                            },
-                                            type: 'b',
-                                            workerMessages: [
-                                                'ready',
-                                                {
-                                                    masterMessages: [{
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    }],
-                                                    message: {
-                                                        a: 'a',
-                                                        type: 'a',
-                                                        workerMessages: [
-                                                            'ready'
-                                                        ]
-                                                    },
-                                                    type: 'x',
-                                                    x: 'x'
-                                                }
-                                            ]
-                                        },
-                                        type: 'y',
-                                        y: 'y'
-                                    }
-                                ]
-                            },
                             type: 'z',
                             z: 'z'
                         }
@@ -1287,20 +1287,20 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should ignore untyped or unknown type messages', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'typed'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -1335,12 +1335,12 @@ if (_cluster.isMaster) {
                 }) {
                     eventHandlersExecuted.push('after workerReady');
 
-                    await clusterMaster.send({
+                    await clusterPrimary.send({
                         message: 'untyped message',
                         to: worker
                     });
 
-                    await clusterMaster.send({
+                    await clusterPrimary.send({
                         message: {
                             type: 'unknown',
                             workerMessages
@@ -1348,7 +1348,7 @@ if (_cluster.isMaster) {
                         to: worker
                     });
 
-                    await clusterMaster.send({
+                    await clusterPrimary.send({
                         message: {
                             type: 'replyUnknown',
                             workerMessages
@@ -1357,12 +1357,12 @@ if (_cluster.isMaster) {
                     });
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -1395,7 +1395,13 @@ if (_cluster.isMaster) {
                     _chai.expect(workerMessages).to.deep.equal([
                         'ready',
                         {
-                            masterMessages: [
+                            message: {
+                                type: 'replyUnknown',
+                                workerMessages: [
+                                    'ready'
+                                ]
+                            },
+                            primaryMessages: [
                                 'untyped message',
                                 {
                                     type: 'unknown',
@@ -1410,12 +1416,6 @@ if (_cluster.isMaster) {
                                     ]
                                 }
                             ],
-                            message: {
-                                type: 'replyUnknown',
-                                workerMessages: [
-                                    'ready'
-                                ]
-                            },
                             type: 'unknown'
                         }
                     ]);
@@ -1456,20 +1456,20 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should be able to communicate with a cluster-worker instance by worker id', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'identify'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -1510,7 +1510,7 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 },
                 workerReady ({
@@ -1519,15 +1519,15 @@ if (_cluster.isMaster) {
                     }
                 }) {
                     eventHandlersExecuted.push('after workerReady');
-                    _chai.expect(clusterMaster.workerById[worker.id]).to.equal(worker);
-                    clusterMaster.send({
+                    _chai.expect(clusterPrimary.workerById[worker.id]).to.equal(worker);
+                    clusterPrimary.send({
                         message: 'identify',
                         to: worker.id
                     });
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -1594,21 +1594,21 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should reject when sending to an invalid worker', callbackFunction => {
             const caughtErrors = [],
-                clusterMaster = _ClusterMaster({
+                clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'communicate'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -1631,20 +1631,20 @@ if (_cluster.isMaster) {
                 }) {
                     eventHandlersExecuted.push('after workerDisconnect');
 
-                    clusterMaster.send({
+                    clusterPrimary.send({
                         message: 'message',
                         to: -.123
                     }).catch(error => {
                         caughtErrors.push(error);
 
-                        return clusterMaster.send({
+                        return clusterPrimary.send({
                             message: 'message',
                             to: {}
                         });
                     }).catch(error => {
                         caughtErrors.push(error);
 
-                        return clusterMaster.send({
+                        return clusterPrimary.send({
                             message: 'message',
                             to: worker
                         });
@@ -1667,16 +1667,16 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 },
                 workerReady () {
                     eventHandlersExecuted.push('after workerReady');
-                    clusterMaster.shutDown();
+                    clusterPrimary.shutDown();
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -1744,20 +1744,20 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should not trigger the worker ready event before the ready message', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'early-send'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -1791,7 +1791,7 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 },
                 workerReady () {
@@ -1799,7 +1799,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -1865,20 +1865,20 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should be able to fork and communicate with multiple cluster-worker instances', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'communicate'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -1917,19 +1917,19 @@ if (_cluster.isMaster) {
                 async workerReady () {
                     eventHandlersExecuted.push('after workerReady');
 
-                    if (clusterMaster.workers.length === 3) {
+                    if (clusterPrimary.workers.length === 3) {
                         let promise = Promise.resolve(0);
 
-                        for (const worker of clusterMaster.workers) {
+                        for (const worker of clusterPrimary.workers) {
                             promise = promise.then(count => new Promise(resolve => {
-                                clusterMaster.after('workerMessage', event => {
+                                clusterPrimary.after('workerMessage', event => {
                                     if (event.data.message.count === count && event.data.worker === worker) {
                                         event.unsubscribe();
                                         resolve(count);
                                     }
                                 });
 
-                                clusterMaster.send({
+                                clusterPrimary.send({
                                     message: {
                                         count
                                     },
@@ -1942,8 +1942,8 @@ if (_cluster.isMaster) {
 
                         _chai.expect(await promise).to.equal(3);
 
-                        promise = Promise.all(clusterMaster.workers.map(worker => new Promise(resolve => {
-                            clusterMaster.after('workerMessage', event => {
+                        promise = Promise.all(clusterPrimary.workers.map(worker => new Promise(resolve => {
+                            clusterPrimary.after('workerMessage', event => {
                                 if (event.data.message.count === 1 && event.data.worker === worker) {
                                     event.unsubscribe();
                                     resolve();
@@ -1951,7 +1951,7 @@ if (_cluster.isMaster) {
                             });
                         })));
 
-                        clusterMaster.send({
+                        clusterPrimary.send({
                             message: {
                                 count: 0
                             }
@@ -1959,12 +1959,12 @@ if (_cluster.isMaster) {
 
                         _chai.expect((await promise).length).to.equal(3);
 
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     }
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -2087,22 +2087,22 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork({
+            clusterPrimary.fork({
                 workerCount: 3
             });
         });
 
         _mocha.it('should observe worker listening events', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'server'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerMessages = [];
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -2139,7 +2139,7 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('after workerOnline');
 
                     _later(2584, () => {
-                        clusterMaster.destroy();
+                        clusterPrimary.destroy();
                     });
                 },
                 workerReady () {
@@ -2147,7 +2147,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -2215,15 +2215,15 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should replace a dead worker', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerExitObjects = [],
@@ -2231,7 +2231,7 @@ if (_cluster.isMaster) {
 
             let count = 0;
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -2285,34 +2285,34 @@ if (_cluster.isMaster) {
 
                     switch (count) {
                         case 0:
-                            clusterMaster.send({
+                            clusterPrimary.send({
                                 message: 'destroy',
                                 to: worker
                             });
                             count += 1;
                             break;
                         case 1:
-                            clusterMaster.send({
+                            clusterPrimary.send({
                                 message: 'exit',
                                 to: worker
                             });
                             count += 1;
                             break;
                         case 2:
-                            clusterMaster.send({
+                            clusterPrimary.send({
                                 message: 'throw',
                                 to: worker
                             });
                             count += 1;
                             break;
                         default:
-                            clusterMaster.destroy();
+                            clusterPrimary.destroy();
                             break;
                     }
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -2446,15 +2446,15 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should not replace a dead worker after shut down', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 workerExitObjects = [],
@@ -2462,7 +2462,7 @@ if (_cluster.isMaster) {
 
             let count = 0;
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -2477,7 +2477,7 @@ if (_cluster.isMaster) {
                 },
                 shutDownComplete () {
                     eventHandlersExecuted.push('after shutDownComplete');
-                    clusterMaster.destroy();
+                    clusterPrimary.destroy();
                 },
                 workerDisconnect () {
                     eventHandlersExecuted.push('after workerDisconnect');
@@ -2517,14 +2517,14 @@ if (_cluster.isMaster) {
 
                     switch (count) {
                         case 0:
-                            clusterMaster.send({
+                            clusterPrimary.send({
                                 message: 'destroy',
                                 to: worker
                             });
                             count += 1;
                             break;
                         case 1:
-                            clusterMaster.send({
+                            clusterPrimary.send({
                                 message: 'destroy',
                                 to: worker
                             });
@@ -2534,7 +2534,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -2616,7 +2616,7 @@ if (_cluster.isMaster) {
                     eventHandlersExecuted.push('on workerExit');
 
                     if (count === 2) {
-                        clusterMaster.shutDown();
+                        clusterPrimary.shutDown();
                     }
                 },
                 workerFork () {
@@ -2633,15 +2633,15 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork();
+            clusterPrimary.fork();
         });
 
         _mocha.it('should be able to select a worker for a task', callbackFunction => {
-            const clusterMaster = _ClusterMaster({
+            const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
                     ],
-                    workerScript: `${__dirname}/js/cluster-worker.js`
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
                 }),
                 eventHandlersExecuted = [],
                 initialWorkerIdSelectionOrder = [],
@@ -2652,7 +2652,7 @@ if (_cluster.isMaster) {
 
             let count = 0;
 
-            clusterMaster.after({
+            clusterPrimary.after({
                 addWorker () {
                     eventHandlersExecuted.push('after addWorker');
                 },
@@ -2696,7 +2696,7 @@ if (_cluster.isMaster) {
                     switch (count) {
                         case 3:
                             for (let count = 0; count < 8; count += 1) {
-                                const workerId = clusterMaster.roundRobin().id;
+                                const workerId = clusterPrimary.roundRobin().id;
 
                                 selectedWorkerIds.push(workerId);
 
@@ -2731,13 +2731,16 @@ if (_cluster.isMaster) {
                                 initialWorkerIdSelectionOrder[1]
                             ]);
 
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[0]].destroy();
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[1]].destroy();
+                            clusterPrimary.workerById[initialWorkerIdSelectionOrder[0]].destroy();
+
+                            clusterPrimary.onceAfter('workerDisconnect', () => {
+                                clusterPrimary.workerById[initialWorkerIdSelectionOrder[1]].destroy();
+                            });
 
                             break;
                         case 5:
                             for (let count = 0; count < 8; count += 1) {
-                                const workerId = clusterMaster.roundRobin().id;
+                                const workerId = clusterPrimary.roundRobin().id;
 
                                 selectedWorkerIds.push(workerId);
 
@@ -2782,8 +2785,11 @@ if (_cluster.isMaster) {
                                 initialWorkerIdSelectionOrder[4]
                             ]);
 
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[3]].destroy();
-                            clusterMaster.workerById[initialWorkerIdSelectionOrder[4]].destroy();
+                            clusterPrimary.workerById[initialWorkerIdSelectionOrder[3]].destroy();
+
+                            clusterPrimary.onceAfter('workerDisconnect', () => {
+                                clusterPrimary.workerById[initialWorkerIdSelectionOrder[4]].destroy();
+                            });
 
                             break;
                         case 7: {
@@ -2797,7 +2803,7 @@ if (_cluster.isMaster) {
                                 defaultTaskSelectedWorkerIdSet = new Set();
 
                             for (let count = 0; count < 3; count += 1) {
-                                const workerId = clusterMaster.roundRobin().id;
+                                const workerId = clusterPrimary.roundRobin().id;
 
                                 defaultTaskSelectedWorkerIds.push(workerId);
 
@@ -2829,7 +2835,7 @@ if (_cluster.isMaster) {
                             _chai.expect(defaultTaskInitialWorkerIdSelectionOrder[2]).to.equal(initialWorkerIdSelectionOrder[2]);
 
                             for (let count = 0; count < 3; count += 1) {
-                                const workerId = clusterMaster.roundRobin({
+                                const workerId = clusterPrimary.roundRobin({
                                     tag: 'customTask'
                                 }).id;
 
@@ -2862,13 +2868,13 @@ if (_cluster.isMaster) {
                             ]);
                             _chai.expect(customTaskInitialWorkerIdSelectionOrder[0]).to.equal(initialWorkerIdSelectionOrder[2]);
 
-                            clusterMaster.destroy();
+                            clusterPrimary.destroy();
                         }
                     }
                 }
             });
 
-            clusterMaster.on({
+            clusterPrimary.on({
                 addWorker () {
                     eventHandlersExecuted.push('on addWorker');
                 },
@@ -2910,16 +2916,16 @@ if (_cluster.isMaster) {
                         'on removeWorker',
                         'after removeWorker',
                         'after workerDisconnect',
-                        'on workerDisconnect',
-                        'on removeWorker',
-                        'after removeWorker',
-                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
                         'after workerExit',
                         'on workerFork',
                         'after workerFork',
+                        'on workerDisconnect',
+                        'on removeWorker',
+                        'after removeWorker',
+                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
@@ -2946,16 +2952,16 @@ if (_cluster.isMaster) {
                         'on removeWorker',
                         'after removeWorker',
                         'after workerDisconnect',
-                        'on workerDisconnect',
-                        'on removeWorker',
-                        'after removeWorker',
-                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
                         'after workerExit',
                         'on workerFork',
                         'after workerFork',
+                        'on workerDisconnect',
+                        'on removeWorker',
+                        'after removeWorker',
+                        'after workerDisconnect',
                         'on workerExit',
                         'on fork',
                         'after fork',
@@ -3040,7 +3046,7 @@ if (_cluster.isMaster) {
                 }
             });
 
-            clusterMaster.fork({
+            clusterPrimary.fork({
                 workerCount: 3
             });
         });
