@@ -407,58 +407,45 @@ export default _make(_Initializable, {
 }, {
     _pubsub: {
         addWorker: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventAddWorker'
+            completeFunction: '_eventAddWorker'
         },
         fork: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventFork'
+            completeFunction: '_eventFork'
         },
         removeWorker: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventRemoveWorker'
+            completeFunction: '_eventRemoveWorker'
         },
         shutDown: {
-            allowPublicPublish: false,
-            completeOnce: true,
-            defaultFunction: '_eventShutDown'
+            completeFunction: '_eventShutDown',
+            completeOnce: true
         },
         shutDownComplete: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventShutDownComplete',
+            completeFunction: '_eventShutDownComplete',
             publishOnce: true
         },
         workerDisconnect: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerDisconnect'
+            completeFunction: '_eventWorkerDisconnect'
         },
         workerError: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerError'
+            completeFunction: '_eventWorkerError'
         },
         workerExit: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerExit'
+            completeFunction: '_eventWorkerExit'
         },
         workerFork: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerFork'
+            completeFunction: '_eventWorkerFork'
         },
         workerListening: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerListening'
+            completeFunction: '_eventWorkerListening'
         },
         workerMessage: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerMessage'
+            completeFunction: '_eventWorkerMessage'
         },
         workerOnline: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerOnline'
+            completeFunction: '_eventWorkerOnline'
         },
         workerReady: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventWorkerReady'
+            completeFunction: '_eventWorkerReady'
         }
     }
 });

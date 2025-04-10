@@ -38,7 +38,7 @@ if (_cluster.isPrimary) {
         _mocha.it('should fail to initialize in a non-worker process', callbackFunction => {
             _ClusterWorker().on('initializeError', event => {
                 _chai.expect(event.data.error).to.be.an.instanceof(_Error);
-                event.preventDefault();
+                event.prevent();
                 callbackFunction();
             });
         });
