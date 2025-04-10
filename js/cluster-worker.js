@@ -108,12 +108,10 @@ export default _make(_Initializable, {
     },
     _pubsub: {
         primaryDisconnect: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventPrimaryDisconnect'
+            completeFunction: '_eventPrimaryDisconnect'
         },
         primaryMessage: {
-            allowPublicPublish: false,
-            defaultFunction: '_eventPrimaryMessage'
+            completeFunction: '_eventPrimaryMessage'
         }
     }
 });
