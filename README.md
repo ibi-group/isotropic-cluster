@@ -1,9 +1,9 @@
 # isotropic-cluster
 
-[![npm version](https://img.shields.io/npm/v/isotropic-cluster.svg)](https://www.npmjs.com/package/isotropic-cluster)
-[![License](https://img.shields.io/npm/l/isotropic-cluster.svg)](https://github.com/ibi-group/isotropic-cluster/blob/main/LICENSE)
-![](https://img.shields.io/badge/tests-passing-brightgreen.svg)
-![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+[npm version](https://www.npmjs.com/package/isotropic-cluster)
+[License](https://github.com/ibi-group/isotropic-cluster/blob/main/LICENSE)
+
+
 
 A reusable and extendable platform to manage local Node.js process clusters with a clean API for primary/worker communication and lifecycle management.
 
@@ -69,7 +69,7 @@ import _later from 'isotropic-later';
     });
 
     // Later, shutdown the cluster
-    _later_(60000, () => {
+    _later(60000, () => {
         primary.shutDown();
     });
 }
@@ -122,6 +122,7 @@ Node.js clusters consist of a primary process that manages multiple worker proce
 - Handles worker failures and restarts
 
 Workers are separate processes that:
+
 - Handle specific tasks (like serving HTTP requests)
 - Report their status to the primary
 - Perform work assigned by the primary
@@ -205,13 +206,13 @@ import _http from 'node:http';
 
     // Create HTTP server
     const server = _http.createServer((request, response) => {
-        ressponse.writeHead(200);
+        response.writeHead(200);
         response.end(`Hello from worker ${_ClusterWorker.workerId}`);
     });
 
     // Start listening on port 3000
     server.listen(3000, () => {
-        console.log(`Worker ${ClusterWorker.workerId} listening on port 3000`);
+        console.log(`Worker ${_ClusterWorker.workerId} listening on port 3000`);
     });
 
     // Handle shutdown
@@ -304,7 +305,7 @@ import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
 {
     const primary = _ClusterPrimary(),
 
-    // Different types of tasks
+        // Different types of tasks
         tasksByType = {
             compute: [{
                 data: '...',
@@ -326,7 +327,8 @@ import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
             }, {
                 data: '...',
                 id: 'l2'
-            }],
+            }]
+        },
 
         processQueue = queueType => {
             const tasks = tasksByType[queueType];
@@ -354,7 +356,6 @@ import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
                 });
             }
         };
-    };
 
     // Listen for worker readiness
     primary.on('workerReady', () => {
@@ -373,8 +374,10 @@ import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
         if (message.type === 'taskComplete') {
             console.log(`Task ${message.taskId} completed with result:`, message.result);
 
-            // Process next task
-            processQueue();
+            // Process the next task from each queue
+            processQueue('compute');
+            processQueue('io');
+            processQueue('lightweight');
         }
     });
 
@@ -396,7 +399,7 @@ import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
 import _make from 'isotropic-make';
 
 // Extend ClusterPrimary with custom message handler methods
-const _AdvancedPrimary = _make(_ClusterPrimary, {
+const _AdvancedPrimary = _make('AdvancedPrimary', _ClusterPrimary, {
     _eventWorkerMessage_log ({
         data: {
             message,
@@ -470,6 +473,8 @@ const primary = _ClusterPrimary(options);
 ```
 
 Options:
+
+- `restartBackoff`: Controls how dead workers are replaced. By default, replacements are paced by an [isotropic-backoff](https://www.npmjs.com/package/isotropic-backoff) instance with default levels. Pass a backoff configuration object to customize the levels, pass an existing backoff instance to share one, or pass `false` to disable the backoff and replace dead workers immediately and indefinitely.
 - `workerArgs`: Array of arguments to pass to worker processes
 - `workerScript`: Path to worker script (defaults to current script)
 - `workerSilent`: Whether to suppress worker stdout/stderr
@@ -480,22 +485,27 @@ Options:
 
 - **destroy()**: Clean up and destroy the primary instance
 - **fork({ workerCount })**: Start new worker processes. `workerCount` is optional and defaults to `1`.
-- **roundRobin({ tag })**: Select a worker using round-robin distribution. The `tag` is optional. It returns the worker object that has been least recently selected for the given tag.
+- **roundRobin({ tag })**: Select a worker using round-robin distribution. The `tag` is optional. It returns the worker object that has been least recently selected for the given tag, or `undefined` if there are no workers.
 - **send({ message, to })**: Send a message to one or more workers. `to` can be a worker object or a worker id. It can also be an array of either. Returns a promise.
 - **shutDown()**: Gracefully shut down all workers
 
 #### Properties
 
+- **restartBackoff**: The backoff instance pacing worker replacements, or `undefined` when disabled
 - **workerById**: Object mapping worker ids to worker objects
 - **workers**: Array of all active worker objects
 
 #### Events
 
+- **addWorker**: When a ready worker is added to the pool
 - **destroy**: When destroy begins
 - **destroyComplete** When destroy completes
+- **fork**: When `fork()` is called to start one or more workers
 - **initialize**: When initialization begins
 - **initializeComplete**: When initialization completes successfully
 - **initializeError**: When initialization fails
+- **removeWorker**: When a worker is removed from the pool
+- **restartGiveUp**: When the restart backoff is exhausted and no workers remain; the cluster shuts down
 - **shutDown**: When the cluster is shutting down
 - **shutDownComplete**: When all workers have been shut down
 - **workerDisconnect**: When a worker disconnects
@@ -516,11 +526,12 @@ const worker = _ClusterWorker(options);
 ```
 
 Options:
+
 - `initialize`: Whether to automatically initialize (defaults to true)
 
 #### Methods
 
-- **destroy()**: Clean up and destroy the worker instance
+- **destroy({ timeout })**: Clean up and destroy the worker instance. The worker disconnects its IPC channel and, if it has not exited on its own within `timeout` milliseconds (default `6765`), is force-killed.
 - **send({ message })**: Send a message to the primary process
 
 #### Static Properties
@@ -548,7 +559,7 @@ import _make from 'isotropic-make';
 import _mongoose from 'mongoose';
 
 // Custom worker with database connection
-const _DbWorker = _make(_ClusterWorker, {
+const _DbWorker = _make('DbWorker', _ClusterWorker, {
     get db () {
         return this._db;
     },
@@ -595,7 +606,36 @@ const _DbWorker = _make(_ClusterWorker, {
 
 ### Auto-Restart on Worker Failure
 
-The `ClusterPrimary` automatically restarts workers that die unexpectedly. This means workers are automatically replaced if they crash, ensuring application resilience.
+The `ClusterPrimary` automatically restarts workers that die unexpectedly, ensuring application resilience. Replacements are paced by a restart backoff: a worker that crashes repeatedly (for example, one that fails on startup) is replaced immediately once, then with escalating delays. Each worker that reaches the ready state resets the backoff. When the backoff is exhausted and other workers remain, the primary logs an error and continues with the remaining workers; when none remain, it publishes a `restartGiveUp` event and shuts down rather than looping forever.
+
+```javascript
+import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
+
+{
+    // Customize the restart pacing: three immediate replacements, then five
+    // escalating delays from 500ms, then give up.
+    const primary = _ClusterPrimary({
+        restartBackoff: {
+            levels: [{
+                count: 3
+            }, {
+                count: 5,
+                delay: 500,
+                factor: 3,
+                maximumDelay: 30000
+            }]
+        }
+    });
+
+    primary.on('restartGiveUp', () => {
+        // The cluster could not keep any worker alive and is shutting down.
+    });
+
+    primary.fork({
+        workerCount: 4
+    });
+}
+```
 
 ### Health Monitoring
 
@@ -669,6 +709,7 @@ import _later from 'isotropic-later';
 
 isotropic-cluster works seamlessly with other modules in the isotropic ecosystem:
 
+- **isotropic-backoff**: Escalating delays for worker replacement
 - **isotropic-error**: Nested error reporting
 - **isotropic-initializable**: Parent-to-child initialization sequence
 - **isotropic-logger**: Structured logging
@@ -681,4 +722,4 @@ Please refer to [CONTRIBUTING.md](https://github.com/ibi-group/isotropic-cluster
 
 ## Issues
 
-If you encounter any issues, please file them at https://github.com/ibi-group/isotropic-cluster/issues
+If you encounter any issues, please file them at [https://github.com/ibi-group/isotropic-cluster/issues](https://github.com/ibi-group/isotropic-cluster/issues)

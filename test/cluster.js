@@ -1,41 +1,46 @@
 import './js/logger-setup.js';
+import _Backoff from 'isotropic-backoff';
 import _chai from 'isotropic-dev-dependencies/lib/chai.js';
 import _cluster from 'node:cluster';
-import _ClusterPrimary from '../js/cluster-primary.js';
-import _ClusterWorker from '../js/cluster-worker.js';
+import _ClusterPrimary from '../lib/cluster-primary.js';
+import _ClusterWorker from '../lib/cluster-worker.js';
 import _Error from 'isotropic-error';
 import _later from 'isotropic-later';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
-import _mocha from 'isotropic-dev-dependencies/lib/mocha.js';
+import _test from 'node:test';
 
 if (_cluster.isPrimary) {
-    _mocha.describe('cluster-worker', function () {
-        this.timeout(144);
-
-        _mocha.it('should construct cluster worker objects', () => {
+    _test.describe('cluster-worker', () => {
+        _test.it('should construct cluster worker objects', () => {
             _chai.expect(_ClusterWorker).to.be.a('function');
+            _chai.expect(_ClusterWorker).to.have.property('name').that.equals('ClusterWorker');
+            _chai.expect(_ClusterWorker).to.have.property('worker');
+            _chai.expect(_ClusterWorker).to.have.property('workerId');
 
             const clusterWorker = new _ClusterWorker({
                 initialize: false
             });
 
+            _chai.expect(clusterWorker).to.be.a('ClusterWorker');
             _chai.expect(clusterWorker).to.be.an.instanceOf(_ClusterWorker);
+            _chai.expect(clusterWorker).to.have.property('send').that.is.a('function');
             clusterWorker.destroy();
         });
 
-        _mocha.it('should be an initializable object factory', () => {
-            _chai.expect(_ClusterWorker).to.be.a('function');
-
+        _test.it('should be an initializable object factory', () => {
             const clusterWorker = _ClusterWorker({
                 initialize: false
             });
 
             _chai.expect(clusterWorker).to.be.an.instanceOf(_ClusterWorker);
+            _chai.expect(clusterWorker).to.have.property('send').that.is.a('function');
             clusterWorker.destroy();
         });
 
-        _mocha.it('should fail to initialize in a non-worker process', callbackFunction => {
+        _test.it('should fail to initialize in a non-worker process', {
+            timeout: 144
+        }, (test, callbackFunction) => {
             _ClusterWorker().on('initializeError', event => {
                 _chai.expect(event.data.error).to.be.an.instanceof(_Error);
                 event.prevent();
@@ -44,20 +49,26 @@ if (_cluster.isPrimary) {
         });
     });
 
-    _mocha.describe('cluster-primary', function () {
-        this.timeout(28657);
+    _test.describe('cluster-primary', () => {
+        // Add a pause to prevent interference from the previous test
+        _test.beforeEach(() => _later(1597));
 
-        _mocha.beforeEach(done => {
-            // Add a pause to prevent interference from the previous test
-            _later(1597, done);
-        });
-
-        _mocha.it('should construct cluster primary objects', callbackFunction => {
+        _test.it('should construct cluster primary objects', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             _chai.expect(_ClusterPrimary).to.be.a('function');
+            _chai.expect(_ClusterPrimary).to.have.property('name').that.equals('ClusterPrimary');
 
             const clusterPrimary = new _ClusterPrimary();
 
+            _chai.expect(clusterPrimary).to.be.a('ClusterPrimary');
             _chai.expect(clusterPrimary).to.be.an.instanceOf(_ClusterPrimary);
+            _chai.expect(clusterPrimary).to.have.property('fork').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('roundRobin').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('send').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('shutDown').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('workerById').that.is.an('object');
+            _chai.expect(clusterPrimary).to.have.property('workers').that.is.an('array');
 
             clusterPrimary.on('destroyComplete', () => {
                 callbackFunction();
@@ -66,12 +77,18 @@ if (_cluster.isPrimary) {
             clusterPrimary.destroy();
         });
 
-        _mocha.it('should be an initializable object factory', callbackFunction => {
-            _chai.expect(_ClusterPrimary).to.be.a('function');
-
+        _test.it('should be an initializable object factory', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary();
 
             _chai.expect(clusterPrimary).to.be.an.instanceOf(_ClusterPrimary);
+            _chai.expect(clusterPrimary).to.have.property('fork').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('roundRobin').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('send').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('shutDown').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('workerById').that.is.an('object');
+            _chai.expect(clusterPrimary).to.have.property('workers').that.is.an('array');
 
             clusterPrimary.on('destroyComplete', () => {
                 callbackFunction();
@@ -80,7 +97,26 @@ if (_cluster.isPrimary) {
             clusterPrimary.destroy();
         });
 
-        _mocha.it('should be able to fork a worker process', callbackFunction => {
+        _test.it('should return undefined from roundRobin when there are no workers', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary();
+
+            _chai.expect(clusterPrimary.roundRobin()).to.equal(void null);
+            _chai.expect(clusterPrimary.roundRobin({
+                tag: 'someTag'
+            })).to.equal(void null);
+
+            clusterPrimary.on('destroyComplete', () => {
+                callbackFunction();
+            });
+
+            clusterPrimary.destroy();
+        });
+
+        _test.it('should be able to fork a worker process', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
@@ -151,7 +187,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should be able to fork a silent worker process', callbackFunction => {
+        _test.it('should be able to fork a silent worker process', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerSilent: true
                 }),
@@ -226,7 +264,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should not be able to fork a worker process after shut down', callbackFunction => {
+        _test.it('should not be able to fork a worker process after shut down', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
@@ -288,7 +328,9 @@ if (_cluster.isPrimary) {
             });
         });
 
-        _mocha.it('should handle worker process errors', callbackFunction => {
+        _test.it('should handle worker process errors', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary(),
                 eventHandlersExecuted = [];
 
@@ -374,7 +416,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should be able to communicate with a cluster-worker instance', callbackFunction => {
+        _test.it('should be able to communicate with a cluster-worker instance', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'communicate',
@@ -520,7 +564,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should execute a method based on the type property of a message', callbackFunction => {
+        _test.it('should execute a method based on the type property of a message', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const eventHandlersExecuted = [],
                 workerMessages = [],
 
@@ -1290,7 +1336,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should ignore untyped or unknown type messages', callbackFunction => {
+        _test.it('should ignore untyped or unknown type messages', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'typed'
@@ -1459,7 +1507,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should be able to communicate with a cluster-worker instance by worker id', callbackFunction => {
+        _test.it('should be able to communicate with a cluster-worker instance by worker id', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'identify'
@@ -1597,7 +1647,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should reject when sending to an invalid worker', callbackFunction => {
+        _test.it('should reject when sending to an invalid worker', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const caughtErrors = [],
                 clusterPrimary = _ClusterPrimary({
                     workerArgs: [
@@ -1747,7 +1799,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should not trigger the worker ready event before the ready message', callbackFunction => {
+        _test.it('should not trigger the worker ready event before the ready message', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'early-send'
@@ -1868,7 +1922,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should be able to fork and communicate with multiple cluster-worker instances', callbackFunction => {
+        _test.it('should be able to fork and communicate with multiple cluster-worker instances', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'communicate'
@@ -2092,7 +2148,9 @@ if (_cluster.isPrimary) {
             });
         });
 
-        _mocha.it('should observe worker listening events', callbackFunction => {
+        _test.it('should observe worker listening events', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'server'
@@ -2218,7 +2276,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should replace a dead worker', callbackFunction => {
+        _test.it('should replace a dead worker', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
@@ -2299,6 +2359,13 @@ if (_cluster.isPrimary) {
                             count += 1;
                             break;
                         case 2:
+                            clusterPrimary.send({
+                                message: 'hang',
+                                to: worker
+                            });
+                            count += 1;
+                            break;
+                        case 3:
                             clusterPrimary.send({
                                 message: 'throw',
                                 to: worker
@@ -2384,6 +2451,24 @@ if (_cluster.isPrimary) {
                         'on addWorker',
                         'after addWorker',
                         'after workerReady',
+                        'on workerDisconnect',
+                        'on removeWorker',
+                        'after removeWorker',
+                        'after workerDisconnect',
+                        'on workerExit',
+                        'on fork',
+                        'after fork',
+                        'after workerExit',
+                        'on workerFork',
+                        'after workerFork',
+                        'on workerOnline',
+                        'after workerOnline',
+                        'on workerMessage',
+                        'after workerMessage',
+                        'on workerReady',
+                        'on addWorker',
+                        'after addWorker',
+                        'after workerReady',
                         'on shutDown',
                         'after shutDown',
                         'on workerDisconnect',
@@ -2401,11 +2486,15 @@ if (_cluster.isPrimary) {
                         code: 0,
                         signal: null
                     }, {
+                        code: 0,
+                        signal: null
+                    }, {
                         code: 1,
                         signal: null
                     }]);
 
                     _chai.expect(workerMessages).to.deep.equal([
+                        'ready',
                         'ready',
                         'ready',
                         'ready',
@@ -2449,7 +2538,9 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should not replace a dead worker after shut down', callbackFunction => {
+        _test.it('should not replace a dead worker after shut down', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
@@ -2636,7 +2727,267 @@ if (_cluster.isPrimary) {
             clusterPrimary.fork();
         });
 
-        _mocha.it('should be able to select a worker for a task', callbackFunction => {
+        _test.it('should escalate restart delays and give up when a worker repeatedly crashes', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary({
+                    restartBackoff: {
+                        levels: [{
+                            count: 2
+                        }, {
+                            count: 2,
+                            delay: 89,
+                            factor: 2
+                        }]
+                    },
+                    workerArgs: [
+                        'crash'
+                    ],
+                    workerScript: `${import.meta.dirname}/js/cluster-worker.js`
+                }),
+                delays = [],
+                eventHandlersExecuted = [];
+
+            clusterPrimary.restartBackoff.on('delayChange', ({
+                data: {
+                    delay
+                }
+            }) => {
+                delays.push(delay);
+            });
+
+            clusterPrimary.after({
+                restartGiveUp () {
+                    eventHandlersExecuted.push('after restartGiveUp');
+                },
+                shutDownComplete () {
+                    eventHandlersExecuted.push('after shutDownComplete');
+
+                    clusterPrimary.destroy();
+                }
+            });
+
+            clusterPrimary.on({
+                destroyComplete () {
+                    _chai.expect(delays).to.deep.equal([
+                        89,
+                        178
+                    ]);
+
+                    _chai.expect(eventHandlersExecuted).to.deep.equal([
+                        'on restartGiveUp',
+                        'on shutDown',
+                        'after restartGiveUp',
+                        'on shutDownComplete',
+                        'after shutDownComplete'
+                    ]);
+
+                    _chai.expect(clusterPrimary.workers).to.deep.equal([]);
+
+                    callbackFunction();
+                },
+                restartGiveUp () {
+                    eventHandlersExecuted.push('on restartGiveUp');
+                },
+                shutDown () {
+                    eventHandlersExecuted.push('on shutDown');
+                },
+                shutDownComplete () {
+                    eventHandlersExecuted.push('on shutDownComplete');
+                }
+            });
+
+            clusterPrimary.fork();
+        });
+
+        _test.it('should delay worker replacement and cancel a pending replacement at shut down', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary({
+                restartBackoff: {
+                    levels: [{
+                        count: 2,
+                        delay: 2584
+                    }]
+                },
+                workerArgs: [
+                    'crash'
+                ],
+                workerScript: `${import.meta.dirname}/js/cluster-worker.js`
+            });
+
+            let forkCount = 0;
+
+            clusterPrimary.after({
+                shutDownComplete () {
+                    clusterPrimary.destroy();
+                },
+                workerExit () {
+                    _later(89, () => {
+                        clusterPrimary.shutDown();
+                    });
+                }
+            });
+
+            clusterPrimary.on({
+                destroyComplete () {
+                    _chai.expect(forkCount).to.equal(1);
+                    _chai.expect(clusterPrimary.restartBackoff).to.equal(void null);
+
+                    callbackFunction();
+                },
+                fork () {
+                    forkCount += 1;
+                }
+            });
+
+            clusterPrimary.fork();
+        });
+
+        _test.it('should continue with remaining workers when restarts are exhausted and give up when none remain', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary({
+                    restartBackoff: {
+                        levels: [{
+                            count: 1
+                        }]
+                    }
+                }),
+                eventHandlersExecuted = [],
+                worker = {
+                    id: 1
+                };
+
+            clusterPrimary.before('fork', event => event.prevent());
+
+            clusterPrimary.on({
+                destroyComplete () {
+                    _chai.expect(eventHandlersExecuted).to.deep.equal([
+                        'on restartGiveUp',
+                        'on shutDownComplete'
+                    ]);
+
+                    callbackFunction();
+                },
+                restartGiveUp () {
+                    eventHandlersExecuted.push('on restartGiveUp');
+                },
+                shutDownComplete () {
+                    eventHandlersExecuted.push('on shutDownComplete');
+
+                    _later(89, () => {
+                        clusterPrimary.destroy();
+                    });
+                }
+            });
+
+            clusterPrimary._addWorker({
+                worker
+            });
+
+            _chai.expect(clusterPrimary.workers).to.deep.equal([
+                worker
+            ]);
+
+            _chai.expect(clusterPrimary._restartWorker()).to.equal(clusterPrimary);
+
+            _chai.expect(clusterPrimary.restartBackoff.exhausted).to.be.false;
+
+            clusterPrimary._restartWorker();
+
+            _chai.expect(clusterPrimary.restartBackoff.exhausted).to.be.true;
+            _chai.expect(eventHandlersExecuted).to.deep.equal([]);
+
+            clusterPrimary._removeWorker({
+                worker
+            });
+
+            clusterPrimary._restartWorker();
+
+            _chai.expect(eventHandlersExecuted).to.deep.equal([
+                'on restartGiveUp'
+            ]);
+        });
+
+        _test.it('should replace dead workers without backoff when the restart backoff is disabled', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary({
+                restartBackoff: false,
+                workerArgs: [
+                    'replace'
+                ],
+                workerScript: `${import.meta.dirname}/js/cluster-worker.js`
+            });
+
+            let forkCount = 0,
+                readyCount = 0;
+
+            _chai.expect(clusterPrimary.restartBackoff).to.equal(void null);
+
+            clusterPrimary.after('workerReady', ({
+                data: {
+                    worker
+                }
+            }) => {
+                readyCount += 1;
+
+                if (readyCount === 1) {
+                    clusterPrimary.send({
+                        message: 'exit',
+                        to: worker
+                    });
+                } else {
+                    clusterPrimary.destroy();
+                }
+            });
+
+            clusterPrimary.on({
+                destroyComplete () {
+                    _chai.expect(forkCount).to.equal(2);
+
+                    callbackFunction();
+                },
+                fork () {
+                    forkCount += 1;
+                }
+            });
+
+            clusterPrimary.fork();
+        });
+
+        _test.it('should accept a shared restart backoff instance without taking ownership', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const restartBackoff = _Backoff({
+                    levels: [{
+                        count: 4,
+                        delay: 89
+                    }]
+                }),
+
+                clusterPrimary = _ClusterPrimary({
+                    restartBackoff
+                });
+
+            _chai.expect(clusterPrimary.restartBackoff).to.equal(restartBackoff);
+
+            clusterPrimary.on('destroyComplete', () => {
+                _chai.expect(restartBackoff.failed()).to.equal(restartBackoff);
+                _chai.expect(restartBackoff.delay).to.equal(89);
+
+                restartBackoff.destroy();
+
+                callbackFunction();
+            });
+
+            clusterPrimary.destroy();
+        });
+
+        _test.it('should be able to select a worker for a task', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
             const clusterPrimary = _ClusterPrimary({
                     workerArgs: [
                         'replace'
@@ -2927,13 +3278,7 @@ if (_cluster.isPrimary) {
                         'after removeWorker',
                         'after workerDisconnect',
                         'on workerExit',
-                        'on fork',
-                        'after fork',
                         'after workerExit',
-                        'on workerFork',
-                        'after workerFork',
-                        'on workerOnline',
-                        'after workerOnline',
                         'on workerOnline',
                         'after workerOnline',
                         'on workerMessage',
@@ -2942,6 +3287,12 @@ if (_cluster.isPrimary) {
                         'on addWorker',
                         'after addWorker',
                         'after workerReady',
+                        'on fork',
+                        'after fork',
+                        'on workerFork',
+                        'after workerFork',
+                        'on workerOnline',
+                        'after workerOnline',
                         'on workerMessage',
                         'after workerMessage',
                         'on workerReady',
@@ -2963,13 +3314,7 @@ if (_cluster.isPrimary) {
                         'after removeWorker',
                         'after workerDisconnect',
                         'on workerExit',
-                        'on fork',
-                        'after fork',
                         'after workerExit',
-                        'on workerFork',
-                        'after workerFork',
-                        'on workerOnline',
-                        'after workerOnline',
                         'on workerOnline',
                         'after workerOnline',
                         'on workerMessage',
@@ -2978,6 +3323,12 @@ if (_cluster.isPrimary) {
                         'on addWorker',
                         'after addWorker',
                         'after workerReady',
+                        'on fork',
+                        'after fork',
+                        'on workerFork',
+                        'after workerFork',
+                        'on workerOnline',
+                        'after workerOnline',
                         'on workerMessage',
                         'after workerMessage',
                         'on workerReady',
@@ -3044,6 +3395,59 @@ if (_cluster.isPrimary) {
                 workerReady () {
                     eventHandlersExecuted.push('on workerReady');
                 }
+            });
+
+            clusterPrimary.fork({
+                workerCount: 3
+            });
+        });
+
+        _test.it('should distribute selections evenly when called synchronously', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary({
+                workerArgs: [
+                    'replace'
+                ],
+                workerScript: `${import.meta.dirname}/js/cluster-worker.js`
+            });
+
+            let readyCount = 0;
+
+            clusterPrimary.after('workerReady', () => {
+                readyCount += 1;
+
+                if (readyCount === 3) {
+                    const selectedCountByWorkerId = {},
+                        selectedWorkerIds = [];
+
+                    for (let count = 0; count < 9; count += 1) {
+                        const workerId = clusterPrimary.roundRobin().id;
+
+                        selectedCountByWorkerId[workerId] = (selectedCountByWorkerId[workerId] || 0) + 1;
+                        selectedWorkerIds.push(workerId);
+                    }
+
+                    // Each of the three workers should be selected exactly three times, cycling in order, even though all nine selections happen synchronously within the same millisecond.
+                    _chai.expect(Object.values(selectedCountByWorkerId).sort()).to.deep.equal([
+                        3,
+                        3,
+                        3
+                    ]);
+                    _chai.expect(selectedWorkerIds[0]).to.equal(selectedWorkerIds[3]);
+                    _chai.expect(selectedWorkerIds[0]).to.equal(selectedWorkerIds[6]);
+                    _chai.expect(selectedWorkerIds[1]).to.equal(selectedWorkerIds[4]);
+                    _chai.expect(selectedWorkerIds[1]).to.equal(selectedWorkerIds[7]);
+                    _chai.expect(selectedWorkerIds[2]).to.equal(selectedWorkerIds[5]);
+                    _chai.expect(selectedWorkerIds[2]).to.equal(selectedWorkerIds[8]);
+                    _chai.expect(new Set(selectedWorkerIds).size).to.equal(3);
+
+                    clusterPrimary.destroy();
+                }
+            });
+
+            clusterPrimary.on('destroyComplete', () => {
+                callbackFunction();
             });
 
             clusterPrimary.fork({
