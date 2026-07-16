@@ -1,7 +1,8 @@
 import './logger-setup.js';
 import _cluster from 'node:cluster';
-import _ClusterWorker from '../../js/cluster-worker.js';
+import _ClusterWorker from '../../lib/cluster-worker.js';
 import _Error from 'isotropic-error';
+import _later from 'isotropic-later';
 import _logger from 'isotropic-logger';
 import _make from 'isotropic-make';
 import _net from 'node:net';
@@ -42,8 +43,12 @@ if (_cluster.isWorker) {
                     });
                 }
             });
+
             break;
         }
+        case 'crash':
+            _process.exit(1);
+            break;
         case 'early-send':
             _process.send('not ready');
             _ClusterWorker();
@@ -65,6 +70,7 @@ if (_cluster.isWorker) {
                     });
                 }
             });
+
             break;
         }
         case 'replace': {
@@ -82,18 +88,27 @@ if (_cluster.isWorker) {
                     case 'exit':
                         _process.exit(0);
                         break;
+                    case 'hang':
+                        clusterWorker.destroy();
+
+                        _later(10946, () => {
+                            throw _Error({
+                                message: 'This shouldn\'t execute'
+                            });
+                        });
+
+                        break;
                     case 'throw':
                         throw _Error({
                             message: 'Throwing an error on purpose'
                         });
                 }
             });
+
             break;
         }
         case 'server': {
-            const clusterWorker = _ClusterWorker();
-
-            clusterWorker.after('initializeComplete', () => {
+            _ClusterWorker().after('initializeComplete', () => {
                 _net.createServer().listen();
             });
 
