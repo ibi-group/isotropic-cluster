@@ -34,7 +34,10 @@
     ],
     "license": "BSD-3-Clause",
     "name": "isotropic-cluster",
-    "repository": "github:ibi-group/isotropic-cluster",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ibi-group/isotropic-cluster.git"
+    },
     "scripts": {
         "lint": "eslint eslint.config.js lib test",
         "posttest": "c8 -c ./node_modules/isotropic-dev-dependencies/config/c8.json check-coverage",
