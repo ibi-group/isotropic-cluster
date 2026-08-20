@@ -63,10 +63,13 @@ if (_cluster.isPrimary) {
 
             _chai.expect(clusterPrimary).to.be.a('ClusterPrimary');
             _chai.expect(clusterPrimary).to.be.an.instanceOf(_ClusterPrimary);
+            _chai.expect(clusterPrimary).to.have.property('active').that.is.true;
             _chai.expect(clusterPrimary).to.have.property('fork').that.is.a('function');
             _chai.expect(clusterPrimary).to.have.property('roundRobin').that.is.a('function');
             _chai.expect(clusterPrimary).to.have.property('send').that.is.a('function');
             _chai.expect(clusterPrimary).to.have.property('shutDown').that.is.a('function');
+            _chai.expect(clusterPrimary).to.have.property('shutDownCompleted').that.is.false;
+            _chai.expect(clusterPrimary).to.have.property('shuttingDown').that.is.false;
             _chai.expect(clusterPrimary).to.have.property('workerById').that.is.an('object');
             _chai.expect(clusterPrimary).to.have.property('workers').that.is.an('array');
 
@@ -89,6 +92,69 @@ if (_cluster.isPrimary) {
             _chai.expect(clusterPrimary).to.have.property('shutDown').that.is.a('function');
             _chai.expect(clusterPrimary).to.have.property('workerById').that.is.an('object');
             _chai.expect(clusterPrimary).to.have.property('workers').that.is.an('array');
+
+            clusterPrimary.on('destroyComplete', () => {
+                callbackFunction();
+            });
+
+            clusterPrimary.destroy();
+        });
+
+        _test.it('should report status through the shut down lifecycle', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary();
+
+            _chai.expect(clusterPrimary.active).to.be.true;
+            _chai.expect(clusterPrimary.shutDownCompleted).to.be.false;
+            _chai.expect(clusterPrimary.shuttingDown).to.be.false;
+
+            clusterPrimary.after({
+                shutDown () {
+                    _chai.expect(clusterPrimary.active).to.be.false;
+                    _chai.expect(clusterPrimary.shutDownCompleted).to.be.false;
+                    _chai.expect(clusterPrimary.shuttingDown).to.be.true;
+                },
+                shutDownComplete () {
+                    _chai.expect(clusterPrimary.active).to.be.false;
+                    _chai.expect(clusterPrimary.shutDownCompleted).to.be.true;
+                    _chai.expect(clusterPrimary.shuttingDown).to.be.false;
+
+                    clusterPrimary.destroy();
+                },
+                workerOnline () {
+                    clusterPrimary.shutDown();
+                }
+            });
+
+            clusterPrimary.on('destroyComplete', () => {
+                _chai.expect(clusterPrimary.active).to.equal(void null);
+                _chai.expect(clusterPrimary.shutDownCompleted).to.equal(void null);
+                _chai.expect(clusterPrimary.shuttingDown).to.equal(void null);
+
+                callbackFunction();
+            });
+
+            clusterPrimary.fork();
+        });
+
+        _test.it('should not report shutting down when the shut down event is prevented', {
+            timeout: 28657
+        }, (test, callbackFunction) => {
+            const clusterPrimary = _ClusterPrimary();
+
+            clusterPrimary.before('shutDown', {
+                callbackFunction: event => {
+                    event.prevent();
+                },
+                once: true
+            });
+
+            clusterPrimary.shutDown();
+
+            _chai.expect(clusterPrimary.active).to.be.true;
+            _chai.expect(clusterPrimary.shutDownCompleted).to.be.false;
+            _chai.expect(clusterPrimary.shuttingDown).to.be.false;
 
             clusterPrimary.on('destroyComplete', () => {
                 callbackFunction();

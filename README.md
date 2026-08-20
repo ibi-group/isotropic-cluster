@@ -135,6 +135,35 @@ Workers are separate processes that:
 4. **Operation**: Normal operation with message passing
 5. **Shutdown**: Clean termination of worker processes
 
+### Cluster Status
+
+A `ClusterPrimary` reports where it is in its own lifecycle through three Boolean getters:
+
+```javascript
+const primary = _ClusterPrimary();
+
+console.log(primary.active); // Operating normally
+console.log(primary.shuttingDown); // Shut down has begun but has not finished
+console.log(primary.shutDownCompleted); // Every worker has disconnected
+```
+
+At most one of them is ever `true`. `active` starts out `true` and becomes `false` the moment the `shutDown` event completes, so it is the one to check before handing out work.
+
+Shutting down is not instantaneous. The primary asks every worker to disconnect and then waits for them, which leaves a window where the cluster is no longer active but is not finished either. `shuttingDown` and `shutDownCompleted` distinguish the two halves of that window. All three are `undefined` once the instance has been destroyed.
+
+| | `active` | `shuttingDown` | `shutDownCompleted` |
+| --- | --- | --- | --- |
+| Operating | `true` | `false` | `false` |
+| Shutting down | `false` | `true` | `false` |
+| Shut down | `false` | `false` | `true` |
+| Destroyed | `undefined` | `undefined` | `undefined` |
+
+The `shutDown` event is `completeOnce`, so a shut down that an observer prevents does not move the cluster out of the operating state. The status changes only when the event actually completes.
+
+`fork()` consults `active` internally, so forking a cluster that is already shutting down is a no-op rather than an error.
+
+These describe the shut down phase specifically. The earlier initialization phase is reported by `initialized`, `initializing`, and `initializeFailed`, inherited from [isotropic-initializable](https://www.npmjs.com/package/isotropic-initializable), and `destroyed` comes from [isotropic-pubsub](https://www.npmjs.com/package/isotropic-pubsub). A `ClusterWorker` has those inherited getters but none of the shut down getters, since a worker does not manage a pool.
+
 ### Event-Based Communication
 
 Both `ClusterPrimary` and `ClusterWorker` extend `isotropic-pubsub`, providing a complete event system:
@@ -142,6 +171,121 @@ Both `ClusterPrimary` and `ClusterWorker` extend `isotropic-pubsub`, providing a
 - Subscribe to events with `on()`, `before()`, and `after()`
 - Publish events with observable lifecycle phases
 - Type-based message routing for organized handlers
+
+### Awaiting Cluster Events
+
+Any of these events can be awaited with the `until` method inherited from [isotropic-pubsub](https://www.npmjs.com/package/isotropic-pubsub), which subscribes once and returns a promise that resolves with a snapshot of the event.
+
+`shutDownComplete` is the natural candidate. Shutting down is asynchronous, and the work that has to happen afterward such as closing a database pool, releasing a lock, or exiting the process, reads better in the enclosing function than in a callback:
+
+```javascript
+import _ClusterPrimary from 'isotropic-cluster/lib/cluster-primary.js';
+import _process from 'node:process';
+
+{
+    const primary = _ClusterPrimary();
+
+    primary.fork({
+        workerCount: 4
+    });
+
+    _process.on('SIGTERM', async () => {
+        primary.shutDown();
+
+        await primary.until('shutDownComplete');
+
+        // Every worker has disconnected, so anything the primary itself
+        // was holding open can be released now.
+        await closeDatabasePool();
+
+        _process.exit(0);
+    });
+}
+```
+
+`shutDownComplete` is a `publishOnce` event, so awaiting it settles whether the shut down finished a moment ago or is still in progress. That matters because the primary shuts itself down on its own initiative too. `restartGiveUp` and `destroy()` both trigger shut down. The shut down may already be over by the time anything gets around to waiting for it:
+
+```javascript
+// Correct whether or not the shut down has already completed
+await primary.until('shutDownComplete');
+```
+
+Add a timeout when a worker might refuse to disconnect:
+
+```javascript
+try {
+    await primary.until({
+        eventName: 'shutDownComplete',
+        subject: 'Cluster shut down',
+        timeout: 30000
+    });
+} catch (error) {
+    // Error: Cluster shut down timed out
+    _process.exit(1);
+}
+```
+
+#### Waiting For A Particular Message
+
+An `until` config accepts a `filterFunction`, which decides whether a given event is the one being waited for. A filtered out event does not run the subscription, so the one-time subscription behind `until` stays subscribed until the *right* event arrives rather than settling for the next one. That turns the primary's message stream into request/response:
+
+```javascript
+const requestResult = async ({
+    primary,
+    task,
+    worker
+}) => {
+    await primary.send({
+        message: {
+            task,
+            type: 'processTask'
+        },
+        to: worker
+    });
+
+    const {
+        data: {
+            message
+        }
+    } = await primary.until({
+        eventName: 'workerMessage',
+        filterFunction: event => event.data.worker === worker && event.data.message?.type === 'taskComplete' && event.data.message.taskId === task.id,
+        subject: 'Task result',
+        timeout: 60000
+    });
+
+    return message.result;
+};
+```
+
+The same filtering works for waiting on one specific worker's lifecycle:
+
+```javascript
+// Resolves when this particular worker is ready for work
+await primary.until({
+    eventName: 'workerReady',
+    filterFunction: event => event.data.worker === worker
+});
+```
+
+#### Awaiting Worker Initialization
+
+`ClusterWorker` and `ClusterPrimary` both extend [isotropic-initializable](https://www.npmjs.com/package/isotropic-initializable), so both have `untilInitialized()`. It resolves when initialization completes and rejects when it fails or when the instance is destroyed first.
+
+This is most useful for a subclass whose initialization is asynchronous, where the instance exists before it is usable:
+
+```javascript
+{
+    const worker = _DbWorker();
+
+    await worker.untilInitialized();
+
+    // The database connection is established here
+    worker.db.collection('jobs');
+}
+```
+
+It is correct whether or not initialization has already finished, so it stays right if a subclass later makes its `_initialize` method asynchronous.
 
 ## Examples
 
@@ -190,10 +334,16 @@ import _process from 'node:process';
     }
 
     // Handle graceful shutdown
-    _process.on('SIGTERM', () => {
+    _process.on('SIGTERM', async () => {
         console.log('Shutting down server');
 
         primary.shutDown();
+
+        await primary.until('shutDownComplete');
+
+        console.log('All workers have disconnected');
+
+        _process.exit(0);
     });
 }
 
@@ -489,11 +639,18 @@ Options:
 - **send({ message, to })**: Send a message to one or more workers. `to` can be a worker object or a worker id. It can also be an array of either. Returns a promise.
 - **shutDown()**: Gracefully shut down all workers
 
+All of the other `isotropic-initializable` and `isotropic-pubsub` instance methods are inherited as well, including `after`, `before`, `destroy`, `initialize`, `on`, `onceAfter`, `onceBefore`, `onceOn`, `publish`, `subscribe`, `until`, and `untilInitialized`.
+
 #### Properties
 
+- **active**: Whether the cluster is operating normally. Becomes `false` when shut down begins and `undefined` after destruction.
 - **restartBackoff**: The backoff instance pacing worker replacements, or `undefined` when disabled
+- **shutDownCompleted**: Whether every worker has disconnected and the shut down has finished. `undefined` after destruction.
+- **shuttingDown**: Whether shut down has begun but has not finished. `undefined` after destruction.
 - **workerById**: Object mapping worker ids to worker objects
 - **workers**: Array of all active worker objects
+
+See [Cluster Status](#cluster-status) for how these relate to one another. `destroyed`, `initialized`, `initializeFailed`, and `initializing` are inherited.
 
 #### Events
 
@@ -533,6 +690,8 @@ Options:
 
 - **destroy({ timeout })**: Clean up and destroy the worker instance. The worker disconnects its IPC channel and, if it has not exited on its own within `timeout` milliseconds (default `6765`), is force-killed.
 - **send({ message })**: Send a message to the primary process
+
+All of the other `isotropic-initializable` and `isotropic-pubsub` instance methods are inherited as well, including `after`, `before`, `destroy`, `initialize`, `on`, `onceAfter`, `onceBefore`, `onceOn`, `publish`, `subscribe`, `until`, and `untilInitialized`.
 
 #### Static Properties
 
@@ -602,6 +761,48 @@ const _DbWorker = _make('DbWorker', _ClusterWorker, {
     // Create the worker
     const worker = _DbWorker();
 }
+```
+
+### Why ClusterWorker Has No `_initializeError` Method
+
+`ClusterWorker._initialize` throws when it discovers that the process it is running in is not a worker process. Nothing in the class implements `_initializeError`, so the base implementation from [isotropic-initializable](https://www.npmjs.com/package/isotropic-initializable) runs instead, and it rethrows the error asynchronously as an uncaught exception. That terminates the process.
+
+**This is deliberate, and it is the correct handling for this particular failure.** `isotropic-initializable` documents `_initializeError` as the place a class takes responsibility for its own initialization failures, and warns that reaching the base method usually means a class forgot to implement one. `ClusterWorker` is the other case: it considered the failure and decided that crashing is the right response.
+
+A `ClusterWorker` in a non-worker process has no primary to report to, no IPC channel to send on, and no work to be assigned. There is no degraded mode to fall back to and nothing to retry, because the condition is a property of how the process was started and cannot change while it runs. A worker that swallowed the error would sit there doing nothing at all, and the primary would simply never see it become ready. Failing loudly, immediately, and in a way that is difficult to suppress is what should happen, so the class gets that behavior by intentionally declining to implement `_initializeError`.
+
+The failure is still published as the `initializeError` event before the base method runs, so an observer can call `prevent()` at the `before` or `on` stage and stop it from completing. That is how the test suite asserts the failure without taking the test process down.
+
+A subclass that overrides `_initialize` takes on its own failure modes, and should implement `_initializeError` when those failures call for something other than a crash. Note that there is one error channel for the whole chain: a subclass's `_initializeError` handles the base class's wrong-process error too, so it needs to recognize what it can handle and rethrow the rest.
+
+```javascript
+import _ClusterWorker from 'isotropic-cluster/lib/cluster-worker.js';
+import _make from 'isotropic-make';
+
+const _DbWorker = _make('DbWorker', _ClusterWorker, {
+    async _initialize () {
+        // ClusterWorker's own _initialize has already run and succeeded by this point
+        this._db = await _mongoose.connect('mongodb://localhost/myapp');
+    },
+    _initializeError (error) {
+        if (error.error?.name === 'MongoNetworkError') {
+            // A database that is not reachable yet is worth reporting and retrying.
+            // It is not the same kind of problem as running in the wrong process.
+            _logger.error({
+                error
+            }, 'Database unreachable; worker will exit and be replaced');
+
+            this.destroy();
+
+            return;
+        }
+
+        // Anything else, including the wrong-process error, still crashes
+        Reflect.apply(_ClusterWorker.prototype._initializeError, this, [
+            error
+        ]);
+    }
+});
 ```
 
 ### Auto-Restart on Worker Failure
