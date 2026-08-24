@@ -1,4 +1,48 @@
-# Changelog
+# isotropic-cluster Changelog
+
+## 0.7.0 - 2026-08-23
+
+### Added
+
+**Three status getters on `ClusterPrimary`: `active`, `shuttingDown`, and `shutDownCompleted`.** Shutting down a cluster is not instantaneous. The primary asks every worker to disconnect and then waits, which leaves a window in which the cluster is no longer serving but is not finished either. These getters make that window observable.
+
+```javascript
+const primary = _ClusterPrimary();
+
+primary.active;             // Operating normally
+primary.shuttingDown;       // Shut down has begun but has not finished
+primary.shutDownCompleted;  // Every worker has disconnected
+```
+
+At most one is ever `true`:
+
+| | `active` | `shuttingDown` | `shutDownCompleted` |
+| --- | --- | --- | --- |
+| Operating | `true` | `false` | `false` |
+| Shutting down | `false` | `true` | `false` |
+| Shut down | `false` | `false` | `true` |
+| Destroyed | `undefined` | `undefined` | `undefined` |
+
+`active` is the one to check before handing out work. It starts `true` and becomes `false` the moment the `shutDown` event completes.
+
+Since `shutDown` is a `completeOnce` event, a shut down that an observer prevents does not move the cluster out of the operating state. The status changes only when the event actually completes. `fork()` consults `active` internally, so forking a cluster that is already shutting down is a no-op rather than an error.
+
+These cover the shut down phase specifically. The earlier initialization phase is reported by `initialized`, `initializing`, and `initializeFailed` inherited from `isotropic-initializable`, and `destroyed` comes from `isotropic-pubsub`. `ClusterWorker` has the inherited getters but not the shut down getters, since a worker does not manage a pool.
+
+### Changed
+
+- Recommends `node ^26.7.0` / `npm ^11.19.0`.
+- `repository` now uses npm's preferred object form with explicit `type` and `url` properties rather than the `github:` shorthand. This is package metadata only.
+
+### Documentation
+
+- A new cluster status section documents the three getters and the states they describe.
+- A new section covers awaiting cluster events with `until`, inherited from `isotropic-pubsub`. Since `shutDownComplete` is a `publishOnce` event, awaiting it settles correctly whether the shut down finished a moment ago or is still in progress, which matters because the primary can start a shut down on its own initiative through `restartGiveUp` or `destroy()`.
+- The same section documents using a `filterFunction` with `until` to turn the primary's message stream into request/response, waiting for a particular reply rather than the next message to arrive.
+
+### Internal
+
+- Test suite expanded from 26 to 31 tests, holding 100% statement, branch, function, and line coverage.
 
 ## 0.6.0 - 2026-07-15
 
